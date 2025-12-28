@@ -1,7 +1,9 @@
 package zone
 
 import (
+	"fmt"
 	"net"
+	"time"
 )
 
 // a function to broadcast(send) messages to other users
@@ -19,5 +21,26 @@ func broadcast(message string, excludeConn net.Conn, flg bool) {
 				conn.Write([]byte("\n" + message + "\n"))
 			}
 		}
+	}
+}
+
+// a function to send the propmt to users
+func propmt() {
+	clientsMu.Lock()
+	defer clientsMu.Unlock()
+	for conn := range clients {
+		clientName, ok := clients[conn]
+		if !ok {
+			continue
+		}
+
+		formatted1 := fmt.Sprintf("[%s][%s]:",
+			time.Now().Format("2006-01-02 15:04:05"),
+			clientName)
+		_, err := conn.Write([]byte(formatted1))
+		if err != nil {
+			fmt.Println("error print the propmt", err)
+		}
+
 	}
 }
