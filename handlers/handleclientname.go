@@ -4,19 +4,10 @@ import (
 	"bufio"
 	"net"
 	"strings"
-	"sync"
-)
-
-var (
-	clients    = make(map[net.Conn]string)
-	clientsMu  sync.Mutex
-	messageLog []string
-	logMu      sync.Mutex
 )
 
 // the main function to handle client name validity
 func getClientName(conn net.Conn) (string, error) {
-
 	reader := bufio.NewReader(conn)
 
 	for {
