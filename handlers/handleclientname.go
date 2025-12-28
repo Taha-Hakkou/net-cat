@@ -4,9 +4,7 @@ import (
 	"bufio"
 	"net"
 	"strings"
-	"sync"
 )
-
 var (
 	clients    = make(map[net.Conn]string)
 	clientsMu  sync.Mutex
@@ -16,7 +14,8 @@ var (
 
 // the main function to handle client name validity
 func getClientName(conn net.Conn) (string, error) {
-
+	hellomsg := peng()
+	conn.Write(hellomsg)
 
 	reader := bufio.NewReader(conn)
 
@@ -49,28 +48,4 @@ func getClientName(conn net.Conn) (string, error) {
 
 		return name, nil
 	}
-}
-
-func Isnameexist(name string) bool {
-	clientsMu.Lock()
-	defer clientsMu.Unlock()
-	for _, k := range clients {
-		if name == k {
-			return false
-		}
-	}
-	return true
-}
-
-func Validname(name string) bool {
-	if len(name) > 20 {
-		return false
-	}
-	for _, i := range name {
-		if i < 32 || i > 126 {
-			return false
-		}
-	}
-
-	return true
 }
