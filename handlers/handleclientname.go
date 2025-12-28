@@ -8,6 +8,9 @@ import (
 
 // the main function to handle client name validity
 func getClientName(conn net.Conn) (string, error) {
+	hellomsg := peng()
+	conn.Write(hellomsg)
+
 	reader := bufio.NewReader(conn)
 
 	for {
