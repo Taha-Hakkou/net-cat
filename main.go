@@ -5,6 +5,8 @@ import (
 	"net"
 	"os"
 	"strconv"
+
+	zone "zone/handlers"
 )
 
 func main() {
@@ -28,4 +30,13 @@ func main() {
 	}
 	defer ln.Close()
 	fmt.Printf("Listening on port %s\n", address)
+
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			fmt.Println("Accept error:", err)
+			continue
+		}
+		go zone.HandleConnection(conn)
+	}
 }
