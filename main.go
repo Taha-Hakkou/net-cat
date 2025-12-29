@@ -2,9 +2,15 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strconv"
+	"time"
+
+	"zone/nctui"
+
+	"github.com/jroimartin/gocui"
 
 	zone "zone/handlers"
 )
@@ -29,14 +35,55 @@ func main() {
 		return
 	}
 	defer ln.Close()
-	fmt.Printf("Listening on port %s\n", address)
 
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			fmt.Println("Accept error:", err)
-			continue
-		}
-		go zone.HandleConnection(conn)
+	//**********************************************************
+	g, err := gocui.NewGui(gocui.OutputNormal)
+	if err != nil {
+		log.Panicln(err)
 	}
+	defer g.Close()
+
+	// Set GUI managers and key bindings
+	g.SetManagerFunc(nctui.Layout)
+	nctui.SetKeybindings(g)
+
+	// fmt.Printf("Listening on port %s\n", address)
+
+	go func() {
+		for {
+			time.Sleep(time.Second)
+			g.Update(func(g *gocui.Gui) error {
+				v, _ := g.View("chat")
+				fmt.Fprintln(v, "")
+				v.Clear()
+				bytes, _ := os.ReadFile("logs.txt")
+				fmt.Fprintln(v, string(bytes))
+				return nil
+			})
+		}
+	}()
+
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				fmt.Println("Accept error:", err)
+				continue
+			}
+			go zone.HandleConnection(conn)
+		}
+	}()
+
+	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
+		log.Panicln(err)
+	}
+	// chat
+	// groups
+	// client names/ips
+
+	// server status ?
+	// send errors/messages with color
+	// listener port
+
+	//**********************************************************
 }
