@@ -20,7 +20,7 @@ var (
 // the main function to handle connections(Name,Limit,prompt,broadcast, connect and disconnect...)
 func HandleConnection(conn net.Conn) {
 	defer conn.Close()
-	disconnect := false
+	isSystemMessage := false
 
 	name, err := getClientName(conn)
 	if err != nil {
@@ -45,17 +45,17 @@ func HandleConnection(conn net.Conn) {
 	sendHistory(conn)
 
 	joinMsg := fmt.Sprintf("✅ %s has joined our chat...", name)
-	broadcast(joinMsg, conn, disconnect)
-	disconnect = true
+	broadcast(joinMsg, conn, isSystemMessage)
+	isSystemMessage = true
 	logs(joinMsg + "\n")
-
+	addToHistory(joinMsg)
 	reader := bufio.NewReader(conn)
 
 	flag := true
 	for {
 		if flag {
 			propmt()
-			disconnect = false
+			isSystemMessage = false
 		}
 		message, err := reader.ReadString('\n')
 		if err != nil {
@@ -64,10 +64,11 @@ func HandleConnection(conn net.Conn) {
 			clientsMu.Unlock()
 
 			leaveMsg := fmt.Sprintf("🔴 %s has left our chat...", name)
-			broadcast(leaveMsg, conn, disconnect)
+			broadcast(leaveMsg, conn, isSystemMessage)
 			propmt()
-			disconnect = true
+			isSystemMessage = true
 			logs(leaveMsg + "\n")
+			addToHistory(leaveMsg)
 			flag = true
 			return
 		}
@@ -95,8 +96,8 @@ func HandleConnection(conn net.Conn) {
 			message)
 
 		addToHistory(formatted)
-		broadcast(formatted, conn, disconnect)
-		disconnect = false
+		broadcast(formatted, conn, isSystemMessage)
+		isSystemMessage = false
 		logs(formatted + "\n")
 		flag = true
 
