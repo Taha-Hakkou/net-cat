@@ -36,7 +36,6 @@ func main() {
 	}
 	defer ln.Close()
 
-	//**********************************************************
 	g, err := gocui.NewGui(gocui.OutputNormal)
 	if err != nil {
 		log.Panicln(err)
@@ -47,13 +46,14 @@ func main() {
 	g.SetManagerFunc(nctui.Layout)
 	nctui.SetKeybindings(g)
 
-	// fmt.Printf("Listening on port %s\n", address)
+	// fmt.Printf("Listening on port %s\n", address) // log in LOGS
 
 	go func() {
 		for {
 			time.Sleep(time.Second)
+			g.Update(updateGroups)
+			// g.Update(updateClients)
 			g.Update(updateChat)
-			g.Update(updateClients)
 		}
 	}()
 
@@ -71,16 +71,28 @@ func main() {
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Panicln(err)
 	}
-	// chat
-	// groups
-	// client names/ips
-
-	// server status ?
-	// send errors/messages with color
-	// listener port
-
-	//**********************************************************
 }
+
+func updateGroups(g *gocui.Gui) error {
+	v, _ := g.View("groups")
+	v.Clear()
+	fmt.Fprintln(v, "")
+	for group := range zone.Groups {
+		fmt.Fprintln(v, group)
+	}
+	return nil
+}
+
+// update only when group is chosen
+// func updateClients(g *gocui.Gui) error {
+// 	v, _ := g.View("clients")
+// 	v.Clear()
+// 	fmt.Fprintln(v, "")
+// 	for _, client := range zone.Clients {
+// 		fmt.Fprintln(v, client)
+// 	}
+// 	return nil
+// }
 
 func updateChat(g *gocui.Gui) error {
 	v, _ := g.View("chat")
@@ -91,12 +103,8 @@ func updateChat(g *gocui.Gui) error {
 	return nil
 }
 
-func updateClients(g *gocui.Gui) error {
-	v, _ := g.View("clients")
-	v.Clear()
-	fmt.Fprintln(v, "")
-	for _, client := range zone.Clients {
-		fmt.Fprintln(v, client)
-	}
-	return nil
-}
+// TODO:
+// client ips
+// server status ?
+// send errors/messages with color
+// listener port

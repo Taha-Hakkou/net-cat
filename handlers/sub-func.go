@@ -1,9 +1,9 @@
 package zone
 
-func Isnameexist(name string) bool {
+func Isnameexist(name string, groupName string) bool {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
-	for _, k := range Clients {
+	for _, k := range Groups[groupName] { // Clients -> Groups[groupName]
 		if name == k {
 			return false
 		}

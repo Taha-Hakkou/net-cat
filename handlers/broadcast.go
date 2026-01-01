@@ -7,11 +7,11 @@ import (
 )
 
 // a function to broadcast(send) messages to other users
-func broadcast(message string, excludeConn net.Conn, flg bool) {
+func broadcast(groupName string, message string, excludeConn net.Conn, flg bool) {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
 
-	for conn := range Clients {
+	for conn := range Groups[groupName] { // Clients -> Groups[groupName]
 		if conn != excludeConn {
 			if flg {
 				conn.Write([]byte(message))
@@ -25,11 +25,11 @@ func broadcast(message string, excludeConn net.Conn, flg bool) {
 }
 
 // a function to send the propmt to users
-func propmt() {
+func prompt(groupName string) {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
-	for conn := range Clients {
-		clientName, ok := Clients[conn]
+	for conn := range Groups[groupName] { // Clients -> Groups[groupName]
+		clientName, ok := Groups[groupName][conn] // Clients -> Groups[groupName]
 		if !ok {
 			continue
 		}
