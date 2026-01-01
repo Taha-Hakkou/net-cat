@@ -2,24 +2,35 @@ package nctui
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/jroimartin/gocui"
 )
 
-func SetKeybindings(g *gocui.Gui) {
+func SetKeybindings(g *gocui.Gui) error {
 	if err := g.SetKeybinding("", gocui.KeyTab, gocui.ModNone, SwitchView); err != nil {
-		log.Panicln(err)
+		return err
 	}
 	if err := g.SetKeybinding("chat", gocui.KeyArrowUp, gocui.ModNone, ScrollUp); err != nil {
-		log.Panicln(err)
+		return err
 	}
 	if err := g.SetKeybinding("chat", gocui.KeyArrowDown, gocui.ModNone, ScrollDown); err != nil {
-		log.Panicln(err)
+		return err
 	}
 	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, Quit); err != nil {
-		log.Panicln(err)
+		return err
 	}
+
+	// Group Selection
+	if err := g.SetKeybinding("groups", gocui.KeyArrowDown, gocui.ModNone, cursorDown); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("groups", gocui.KeyArrowUp, gocui.ModNone, cursorUp); err != nil {
+		return err
+	}
+	// if err := g.SetKeybinding("groups", gocui.KeyEnter, gocui.ModNone, choose); err != nil {
+	// 	return err
+	// }
+	return nil
 }
 
 func Layout(g *gocui.Gui) error {

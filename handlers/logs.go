@@ -1,18 +1,21 @@
 package zone
 
 import (
+	"fmt"
 	"log"
 	"os"
 )
+
 // a function to store logs
-func logs(text string) {
-	file, err := os.OpenFile("logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+func logs(groupName, text string) {
+	logFile := fmt.Sprintf("logs/%s.txt", groupName)
+	file, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
-		
+		// log in LOGS
 	}
 	defer file.Close()
 
 	if _, err := file.WriteString(text); err != nil {
-		log.Fatal(err)
+		log.Fatal(err) //
 	}
 }

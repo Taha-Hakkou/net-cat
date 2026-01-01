@@ -38,11 +38,37 @@ func ScrollUp(g *gocui.Gui, v *gocui.View) error {
 }
 
 func ScrollDown(g *gocui.Gui, v *gocui.View) error {
-	cv := g.CurrentView()
+	cv := g.CurrentView() // we already have 'v' ??????????
 	ox, oy := cv.Origin()
 	return cv.SetOrigin(ox, oy+1)
 }
 
+// Group Selection
+
+func cursorDown(g *gocui.Gui, v *gocui.View) error {
+	if SelectedIndex < len(groups)-1 {
+		SelectedIndex++
+		SelectedGroup = groups[SelectedIndex]
+	}
+	UpdateGroups(g)
+	return nil
+}
+
+func cursorUp(g *gocui.Gui, v *gocui.View) error {
+	if SelectedIndex > 0 {
+		SelectedIndex--
+		SelectedGroup = groups[SelectedIndex]
+	}
+	UpdateGroups(g)
+	return nil
+}
+
+// func choose(g *gocui.Gui, v *gocui.View) error {
+// 	fmt.Println("Selected:", options[selected])
+// 	return nil
+// }
+
+// Quit
 func Quit(g *gocui.Gui, v *gocui.View) error {
 	return gocui.ErrQuit
 }

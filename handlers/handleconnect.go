@@ -132,7 +132,7 @@ func HandleConnection(conn net.Conn) {
 	joinMsg := fmt.Sprintf("✅ %s has joined our chat...", name)
 	broadcast(groupName, joinMsg, conn, isSystemMessage) // groupName added
 	isSystemMessage = true
-	logs(joinMsg + "\n")
+	logs(groupName, joinMsg+"\n")
 	addToHistory(joinMsg)
 
 	// commented
@@ -155,7 +155,7 @@ func HandleConnection(conn net.Conn) {
 			broadcast(groupName, leaveMsg, conn, isSystemMessage) // groupName added
 			prompt(groupName)
 			isSystemMessage = true
-			logs(leaveMsg + "\n")
+			logs(groupName, leaveMsg+"\n")
 			addToHistory(leaveMsg)
 			flag = true
 			return
@@ -186,7 +186,7 @@ func HandleConnection(conn net.Conn) {
 		addToHistory(formatted)
 		broadcast(groupName, formatted, conn, isSystemMessage) // groupName added
 		isSystemMessage = false
-		logs(formatted + "\n")
+		logs(groupName, formatted+"\n")
 		flag = true
 
 	}

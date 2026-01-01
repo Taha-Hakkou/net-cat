@@ -44,16 +44,19 @@ func main() {
 
 	// Set GUI managers and key bindings
 	g.SetManagerFunc(nctui.Layout)
-	nctui.SetKeybindings(g)
+	err = nctui.SetKeybindings(g)
+	if err != nil {
+		log.Panicln(err)
+	}
 
 	// fmt.Printf("Listening on port %s\n", address) // log in LOGS
 
 	go func() {
 		for {
-			time.Sleep(time.Second)
-			g.Update(updateGroups)
-			// g.Update(updateClients)
-			g.Update(updateChat)
+			time.Sleep(2 * time.Second)
+			g.Update(nctui.UpdateGroups)
+			g.Update(nctui.UpdateClients)
+			g.Update(nctui.UpdateChat)
 		}
 	}()
 
@@ -62,7 +65,7 @@ func main() {
 			conn, err := ln.Accept()
 			if err != nil {
 				fmt.Println("Accept error:", err)
-				continue
+				return // return only the routine ?? | OR continue
 			}
 			go zone.HandleConnection(conn)
 		}
@@ -71,36 +74,6 @@ func main() {
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Panicln(err)
 	}
-}
-
-func updateGroups(g *gocui.Gui) error {
-	v, _ := g.View("groups")
-	v.Clear()
-	fmt.Fprintln(v, "")
-	for group := range zone.Groups {
-		fmt.Fprintln(v, group)
-	}
-	return nil
-}
-
-// update only when group is chosen
-// func updateClients(g *gocui.Gui) error {
-// 	v, _ := g.View("clients")
-// 	v.Clear()
-// 	fmt.Fprintln(v, "")
-// 	for _, client := range zone.Clients {
-// 		fmt.Fprintln(v, client)
-// 	}
-// 	return nil
-// }
-
-func updateChat(g *gocui.Gui) error {
-	v, _ := g.View("chat")
-	v.Clear()
-	fmt.Fprintln(v, "")
-	bytes, _ := os.ReadFile("logs.txt")
-	fmt.Fprintln(v, string(bytes))
-	return nil
 }
 
 // TODO:
