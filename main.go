@@ -52,14 +52,8 @@ func main() {
 	go func() {
 		for {
 			time.Sleep(time.Second)
-			g.Update(func(g *gocui.Gui) error {
-				v, _ := g.View("chat")
-				fmt.Fprintln(v, "")
-				v.Clear()
-				bytes, _ := os.ReadFile("logs.txt")
-				fmt.Fprintln(v, string(bytes))
-				return nil
-			})
+			g.Update(updateChat)
+			g.Update(updateClients)
 		}
 	}()
 
@@ -86,4 +80,23 @@ func main() {
 	// listener port
 
 	//**********************************************************
+}
+
+func updateChat(g *gocui.Gui) error {
+	v, _ := g.View("chat")
+	v.Clear()
+	fmt.Fprintln(v, "")
+	bytes, _ := os.ReadFile("logs.txt")
+	fmt.Fprintln(v, string(bytes))
+	return nil
+}
+
+func updateClients(g *gocui.Gui) error {
+	v, _ := g.View("clients")
+	v.Clear()
+	fmt.Fprintln(v, "")
+	for _, client := range zone.Clients {
+		fmt.Fprintln(v, client)
+	}
+	return nil
 }

@@ -11,7 +11,7 @@ import (
 
 // Declaring global variables
 var (
-	clients    = make(map[net.Conn]string)
+	Clients    = make(map[net.Conn]string)
 	clientsMu  sync.Mutex
 	messageLog []string
 	logMu      sync.Mutex
@@ -29,7 +29,7 @@ func HandleConnection(conn net.Conn) {
 	}
 
 	clientsMu.Lock()
-	if len(clients) >= 10 {
+	if len(Clients) >= 10 {
 		clientsMu.Unlock()
 		_, err := conn.Write([]byte("Server full. Try again later.\n"))
 		if err != nil {
@@ -38,7 +38,7 @@ func HandleConnection(conn net.Conn) {
 		return
 	}
 
-	clients[conn] = name
+	Clients[conn] = name
 
 	clientsMu.Unlock()
 
@@ -60,7 +60,7 @@ func HandleConnection(conn net.Conn) {
 		message, err := reader.ReadString('\n')
 		if err != nil {
 			clientsMu.Lock()
-			delete(clients, conn)
+			delete(Clients, conn)
 			clientsMu.Unlock()
 
 			leaveMsg := fmt.Sprintf("🔴 %s has left our chat...", name)
@@ -77,7 +77,7 @@ func HandleConnection(conn net.Conn) {
 		if message == "" || !Isvalidmessage(message) {
 			flag = false
 			clientsMu.Lock()
-			clientName, ok := clients[conn]
+			clientName, ok := Clients[conn]
 			clientsMu.Unlock()
 			if !ok {
 				return

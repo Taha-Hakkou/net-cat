@@ -11,7 +11,7 @@ func broadcast(message string, excludeConn net.Conn, flg bool) {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
 
-	for conn := range clients {
+	for conn := range Clients {
 		if conn != excludeConn {
 			if flg {
 				conn.Write([]byte(message))
@@ -28,8 +28,8 @@ func broadcast(message string, excludeConn net.Conn, flg bool) {
 func propmt() {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
-	for conn := range clients {
-		clientName, ok := clients[conn]
+	for conn := range Clients {
+		clientName, ok := Clients[conn]
 		if !ok {
 			continue
 		}

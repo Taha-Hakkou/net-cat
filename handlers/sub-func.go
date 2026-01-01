@@ -3,7 +3,7 @@ package zone
 func Isnameexist(name string) bool {
 	clientsMu.Lock()
 	defer clientsMu.Unlock()
-	for _, k := range clients {
+	for _, k := range Clients {
 		if name == k {
 			return false
 		}
