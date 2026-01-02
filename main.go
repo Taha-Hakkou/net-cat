@@ -54,13 +54,13 @@ func main() {
 	go func() {
 		for {
 			time.Sleep(2 * time.Second)
-			g.Update(nctui.UpdateGroups)
-			g.Update(nctui.UpdateClients)
-			g.Update(nctui.UpdateChat)
+			// g.Update(nctui.UpdateGroups)
+			// g.Update(nctui.UpdateClients)
+			// g.Update(nctui.UpdateChat)
 		}
 	}()
 
-	go func() {
+	go func() { // maybe doesn't need go-routine ?!!
 		for {
 			conn, err := ln.Accept()
 			if err != nil {

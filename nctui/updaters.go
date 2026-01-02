@@ -3,7 +3,6 @@ package nctui
 import (
 	"fmt"
 	"os"
-
 	zone "zone/handlers"
 
 	"github.com/jroimartin/gocui"
