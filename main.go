@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -54,30 +55,35 @@ func main() {
 	go func() {
 		for {
 			time.Sleep(2 * time.Second)
-			// g.Update(nctui.UpdateGroups)
-			// g.Update(nctui.UpdateClients)
-			// g.Update(nctui.UpdateChat)
+			g.Update(nctui.UpdateGroups)
+			g.Update(nctui.UpdateClients)
+			g.Update(nctui.UpdateChat)
 		}
 	}()
 
-	go func() { // maybe doesn't need go-routine ?!!
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				fmt.Println("Accept error:", err)
-				return // return only the routine ?? | OR continue
-			}
-			go zone.HandleConnection(conn)
-		}
-	}()
+	// Accept loop
+	go acceptLoop(ln)
 
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Panicln(err)
 	}
 }
 
+func acceptLoop(ln net.Listener) { // maybe doesn't need go-routine ?!!
+	for {
+		conn, err := ln.Accept()
+		if err != nil { // not understandable !!!!!
+			if errors.Is(err, net.ErrClosed) {
+				// listener closed → normal shutdown
+				return
+			}
+			fmt.Println("Accept error:", err)
+			continue // return only the routine ?? | OR continue
+		}
+		go zone.HandleConnection(conn)
+	}
+}
+
 // TODO:
 // client ips
-// server status ?
-// send errors/messages with color
 // listener port
