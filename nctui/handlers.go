@@ -34,6 +34,9 @@ var scrollableViews = []string{"logs", "chat"}
 
 func ScrollUp(g *gocui.Gui, v *gocui.View) error { // v = nil
 	v = g.CurrentView()
+	if v == nil {
+		return nil
+	}
 	for _, sv := range scrollableViews {
 		if sv == v.Name() {
 			ox, oy := v.Origin()
@@ -48,6 +51,9 @@ func ScrollUp(g *gocui.Gui, v *gocui.View) error { // v = nil
 
 func ScrollDown(g *gocui.Gui, v *gocui.View) error { // v = nil
 	v = g.CurrentView()
+	if v == nil {
+		return nil
+	}
 	for _, sv := range scrollableViews {
 		if sv == v.Name() {
 			ox, oy := v.Origin()
