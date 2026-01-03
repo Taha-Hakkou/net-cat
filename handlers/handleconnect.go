@@ -9,8 +9,10 @@ import (
 	"time"
 )
 
-const MAX_GROUPS int = 4
-const MAX_CLIENTS int = 10
+const (
+	MAX_GROUPS  int = 4
+	MAX_CLIENTS int = 10
+)
 
 // Declaring global variables
 var (

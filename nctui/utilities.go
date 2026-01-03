@@ -58,8 +58,8 @@ func Layout(g *gocui.Gui) error {
 	// Frame
 	fx1 := tx + 2
 	fy1 := 0
-	fx2 := max(maxX-1, fx1+1) // +pWidth+1+3*hGap)
-	fy2 := max(maxY-1, 1)     // 2+3*vGap)
+	fx2 := max(maxX-1, fx1+1)
+	fy2 := max(maxY-1, 1)
 	if _, err := g.SetView("frame", fx1, fy1, fx2, fy2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
@@ -101,22 +101,23 @@ func Layout(g *gocui.Gui) error {
 		v.Title = " CHAT "
 		v.Wrap = true
 		v.Autoscroll = false
+		// fmt.Fprintln(v, "")
 	}
 
 	return nil
 }
 
 func SetKeybindings(g *gocui.Gui) error {
+	// Switch views
 	if err := g.SetKeybinding("", gocui.KeyTab, gocui.ModNone, SwitchView); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding("chat", gocui.KeyArrowUp, gocui.ModNone, ScrollUp); err != nil {
+
+	// View scrolling
+	if err := g.SetKeybinding("", gocui.KeyArrowUp, gocui.ModNone, ScrollUp); err != nil {
 		return err
 	}
-	if err := g.SetKeybinding("chat", gocui.KeyArrowDown, gocui.ModNone, ScrollDown); err != nil {
-		return err
-	}
-	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, Quit); err != nil {
+	if err := g.SetKeybinding("", gocui.KeyArrowDown, gocui.ModNone, ScrollDown); err != nil {
 		return err
 	}
 
@@ -127,8 +128,11 @@ func SetKeybindings(g *gocui.Gui) error {
 	if err := g.SetKeybinding("groups", gocui.KeyArrowUp, gocui.ModNone, cursorUp); err != nil {
 		return err
 	}
-	// if err := g.SetKeybinding("groups", gocui.KeyEnter, gocui.ModNone, choose); err != nil {
-	// 	return err
-	// }
+
+	// Quit
+	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, Quit); err != nil {
+		return err
+	}
+
 	return nil
 }

@@ -18,20 +18,18 @@ func getClientName(conn net.Conn, groupName string) (string, error) {
 		}
 
 		name = strings.TrimSpace(name)
-		booln := Isnameexist(name, groupName)
-		bool2 := Validname(name)
-
-		if !booln {
-			conn.Write([]byte("this name is exist .\n"))
+		if name == "" {
+			conn.Write([]byte("Name cannot be empty.\n"))
 			continue
 		}
-		if !bool2 {
+
+		if !Validname(name) {
 			conn.Write([]byte("this is not valid name.\n"))
 			continue
 		}
 
-		if name == "" {
-			conn.Write([]byte("Name cannot be empty.\n"))
+		if !Isnameexist(name, groupName) {
+			conn.Write([]byte("this name is exist .\n"))
 			continue
 		}
 
