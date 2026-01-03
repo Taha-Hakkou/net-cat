@@ -3,10 +3,22 @@ package nctui
 import (
 	"fmt"
 	"os"
+
 	zone "zone/handlers"
 
 	"github.com/jroimartin/gocui"
 )
+
+func UpdateLog(g *gocui.Gui) error {
+	v, _ := g.View("logs")
+	v.Clear()
+	fmt.Fprintln(v, "")
+	bytes, err := os.ReadFile("nc.log")
+	if err == nil {
+		fmt.Fprintln(v, string(bytes))
+	}
+	return nil
+}
 
 var (
 	SelectedGroup string

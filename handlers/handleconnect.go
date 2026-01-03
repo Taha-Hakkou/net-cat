@@ -77,10 +77,6 @@ func HandleConnection(conn net.Conn) {
 		}
 		message, err := reader.ReadString('\n')
 		if err != nil {
-			clientsMu.Lock()
-			delete(Groups[groupName], conn) // Clients -> Groups[groupName]
-			clientsMu.Unlock()
-
 			leaveMsg := fmt.Sprintf("🔴 %s has left our chat...", name)
 			broadcast(groupName, leaveMsg, conn, isSystemMessage) // groupName added
 			prompt(groupName)
@@ -88,10 +84,45 @@ func HandleConnection(conn net.Conn) {
 			logs(groupName, leaveMsg+"\n")
 			addToHistory(leaveMsg)
 			flag = true
+
+			clientsMu.Lock()
+			delete(Groups[groupName], conn) // Clients -> Groups[groupName]
+			if len(Groups[groupName]) == 0 {
+				delete(Groups, groupName) // remove empty group
+				removeLogFile(groupName)
+			}
+			clientsMu.Unlock()
 			return
 		}
 		message = strings.TrimSpace(message)
 
+		// Change name command
+		if message == "/name" {
+			for {
+				clientsMu.Lock()
+				newName, err := getClientName(conn, groupName)
+				if err != nil {
+					clientsMu.Unlock()
+					conn.Write([]byte("Invalid name, try again.\n"))
+					continue
+				}
+
+				oldName := name
+				name = newName
+				Groups[groupName][conn] = newName
+				clientsMu.Unlock()
+
+				changeMsg := fmt.Sprintf("🔁 %s changed name to %s", oldName, newName)
+				broadcast(groupName, changeMsg, conn, isSystemMessage)
+				isSystemMessage = true
+				logs(groupName, changeMsg+"\n")
+				addToHistory(changeMsg)
+				break
+			}
+			continue
+		}
+
+		// Skip invalid or empty messages
 		if message == "" || !Isvalidmessage(message) {
 			flag = false
 			clientsMu.Lock()

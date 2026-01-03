@@ -50,11 +50,12 @@ func main() {
 		log.Panicln(err)
 	}
 
-	// fmt.Printf("Listening on port %s\n", address) // log in LOGS
+	zone.WriteToMainLog(fmt.Sprintf("Listening on port %s", address))
 
 	go func() {
 		for {
 			time.Sleep(2 * time.Second)
+			g.Update(nctui.UpdateLog)
 			g.Update(nctui.UpdateGroups)
 			g.Update(nctui.UpdateClients)
 			g.Update(nctui.UpdateChat)
@@ -67,6 +68,9 @@ func main() {
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Panicln(err)
 	}
+
+	// Remove Main Log
+	os.Remove("nc.log")
 }
 
 func acceptLoop(ln net.Listener) { // maybe doesn't need go-routine ?!!
@@ -86,4 +90,3 @@ func acceptLoop(ln net.Listener) { // maybe doesn't need go-routine ?!!
 
 // TODO:
 // client ips
-// listener port

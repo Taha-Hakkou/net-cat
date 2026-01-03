@@ -23,3 +23,20 @@ func logs(groupName, text string) {
 		log.Fatal(err) //
 	}
 }
+
+// Removes log file after group deletion
+func removeLogFile(groupName string) {
+	err := os.Remove(fmt.Sprintf("logs/%s.txt", groupName))
+	if err != nil {
+		msg := fmt.Sprintf("Error removing file: %s", err)
+		WriteToMainLog(msg)
+		return
+	}
+	WriteToMainLog("File removed successfully")
+}
+
+func WriteToMainLog(msg string) {
+	file, _ := os.OpenFile("nc.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	defer file.Close()
+	file.WriteString(msg + "\n")
+}
