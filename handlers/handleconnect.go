@@ -19,7 +19,8 @@ var (
 	Groups     = make(map[string]map[net.Conn]string)
 	groupsMu   sync.RWMutex
 	clientsMu  sync.RWMutex
-	messageLog []string
+	// Change: Store message history per group instead of globally
+	messageLog = make(map[string][]string)
 	logMu      sync.Mutex
 )
 
@@ -59,12 +60,13 @@ func HandleConnection(conn net.Conn) {
 		}
 	}
 
-	sendHistory(conn)
+	// Send history for THIS group only
+	sendHistory(conn, groupName)
 
 	joinMsg := fmt.Sprintf("✅ %s has joined our chat...", name)
 	broadcastToOthers(groupName, joinMsg, conn)
 	logs(groupName, joinMsg+"\n")
-	addToHistory(joinMsg)
+	addToHistory(groupName, joinMsg)
 
 	// Send initial prompt to THIS user only
 	sendPrompt(conn, name)
@@ -78,6 +80,10 @@ func HandleConnection(conn net.Conn) {
 				delete(Groups[groupName], conn)
 				if len(Groups[groupName]) == 0 {
 					delete(Groups, groupName)
+					// Clean up history for empty group
+					logMu.Lock()
+					delete(messageLog, groupName)
+					logMu.Unlock()
 					removeLogFile(groupName)
 				}
 			}
@@ -86,7 +92,7 @@ func HandleConnection(conn net.Conn) {
 			leaveMsg := fmt.Sprintf("🔴 %s has left our chat...", name)
 			broadcastToOthers(groupName, leaveMsg, conn)
 			logs(groupName, leaveMsg+"\n")
-			addToHistory(leaveMsg)
+			addToHistory(groupName, leaveMsg)
 			return
 		}
 		message = strings.TrimSpace(message)
@@ -110,7 +116,7 @@ func HandleConnection(conn net.Conn) {
 					changeMsg := fmt.Sprintf("🔁 %s changed name to %s", oldName, newName)
 					broadcastToOthers(groupName, changeMsg, conn)
 					logs(groupName, changeMsg+"\n")
-					addToHistory(changeMsg)
+					addToHistory(groupName, changeMsg)
 					break
 				} else {
 					groupsMu.Unlock()
@@ -134,7 +140,7 @@ func HandleConnection(conn net.Conn) {
 			name,
 			message)
 
-		addToHistory(formatted)
+		addToHistory(groupName, formatted)
 		// Broadcast to all OTHER users
 		broadcastToOthers(groupName, formatted, conn)
 		logs(groupName, formatted+"\n")
@@ -143,86 +149,3 @@ func HandleConnection(conn net.Conn) {
 		sendPrompt(conn, name)
 	}
 }
-
-func CreateGroup(conn net.Conn) (string, string, error) {
-	groupsMu.Lock()
-	if len(Groups) >= MAX_GROUPS {
-		groupsMu.Unlock()
-		conn.Write([]byte("Server is full. Choose again!\n"))
-		return "", "", nil
-	}
-
-	groupName := fmt.Sprintf("room%d", len(Groups)+1)
-	Groups[groupName] = make(map[net.Conn]string)
-	groupsMu.Unlock()
-
-	name, err := getClientName(conn, groupName)
-	if err != nil {
-		fmt.Println("Invalid name. Disconnecting client.")
-		return "", "", err
-	}
-
-	groupsMu.Lock()
-	if _, ok := Groups[groupName]; ok {
-		Groups[groupName][conn] = name
-	}
-	groupsMu.Unlock()
-
-	return groupName, name, nil
-}
-
-func JoinGroup(conn net.Conn) (string, string, error) {
-	reader := bufio.NewReader(conn)
-
-	groupsMu.RLock()
-	if len(Groups) == 0 {
-		groupsMu.RUnlock()
-		conn.Write([]byte("No groups found. Choose again!\n"))
-		return "", "", nil
-	}
-	groupsMu.RUnlock()
-
-	for {
-		groupsMu.RLock()
-		for grp := range Groups {
-			conn.Write([]byte(fmt.Sprintf("* %s [%d users]\n", grp, len(Groups[grp]))))
-		}
-		groupsMu.RUnlock()
-
-		conn.Write([]byte("[ENTER GROUP NAME]:"))
-		groupName, _ := reader.ReadString('\n')
-		groupName = strings.ToLower(strings.TrimSpace(groupName))
-
-		groupsMu.RLock()
-		_, ok := Groups[groupName]
-		groupsMu.RUnlock()
-		if !ok {
-			conn.Write([]byte("Group not found. Choose again!\n"))
-			continue
-		}
-
-		name, err := getClientName(conn, groupName)
-		if err != nil {
-			fmt.Println("Invalid name. Disconnecting client.")
-			return "", "", err
-		}
-
-		groupsMu.RLock()
-		if len(Groups[groupName]) >= MAX_CLIENTS {
-			groupsMu.RUnlock()
-			conn.Write([]byte("Group is full. Choose again!\n"))
-			continue
-		}
-		groupsMu.RUnlock()
-
-		groupsMu.Lock()
-		Groups[groupName][conn] = name
-		groupsMu.Unlock()
-
-		return groupName, name, nil
-	}
-}
-
-
-
-// Broadcast to all users EXCEPT the sender

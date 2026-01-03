@@ -1,8 +1,8 @@
 package zone
 
-// a function to store the history messages
-func addToHistory(msg string) {
+// Updated: Add message to specific group's history
+func addToHistory(groupName, message string) {
 	logMu.Lock()
 	defer logMu.Unlock()
-	messageLog = append(messageLog, msg)
+	messageLog[groupName] = append(messageLog[groupName], message)
 }
