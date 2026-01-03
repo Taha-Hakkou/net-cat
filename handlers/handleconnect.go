@@ -23,7 +23,6 @@ var (
 	messageLog []string
 	logMu      sync.Mutex // log for every group
 )
-
 // the main function to handle connections(Name,Limit,prompt,broadcast, connect and disconnect...)
 func HandleConnection(conn net.Conn) {
 	defer conn.Close()
@@ -39,32 +38,33 @@ func HandleConnection(conn net.Conn) {
 
 	for {
 		conn.Write([]byte("[ENTER YOUR ANSWER]:"))
-		answer, _ := reader.ReadString('\n') // error handling like in get client
+		answer, _ := reader.ReadString('\n')
+		answer = strings.TrimSpace(answer)
 		var g, n string
 		var e error
-		if strings.TrimSpace(answer) == "2" {
-			// create new group
+
+		if answer == "2" {
 			g, n, e = CreateGroup(conn)
 		} else {
-			// join existing group
 			g, n, e = JoinGroup(conn)
 		}
-		if g == "" && n == "" {
-			if e == nil {
-				continue
-			} else {
-				return
-			}
+
+		if e != nil {
+			return
 		}
-		groupName = g
-		name = n
-		break
+
+		if g != "" && n != "" {
+			groupName = g
+			name = n
+			break
+		}
+		// else: continue asking
 	}
 
 	sendHistory(conn)
 
 	joinMsg := fmt.Sprintf("✅ %s has joined our chat...", name)
-	broadcast(groupName, joinMsg, conn, isSystemMessage) // groupName added
+	broadcast(groupName, joinMsg, conn, isSystemMessage)
 	isSystemMessage = true
 	logs(groupName, joinMsg+"\n")
 	addToHistory(joinMsg)
@@ -75,63 +75,69 @@ func HandleConnection(conn net.Conn) {
 			prompt(groupName)
 			isSystemMessage = false
 		}
+
 		message, err := reader.ReadString('\n')
 		if err != nil {
+			groupsMu.Lock()
+			if _, ok := Groups[groupName]; ok {
+				delete(Groups[groupName], conn)
+				if len(Groups[groupName]) == 0 {
+					delete(Groups, groupName)
+					removeLogFile(groupName)
+				}
+			}
+			groupsMu.Unlock()
+
 			leaveMsg := fmt.Sprintf("🔴 %s has left our chat...", name)
-			broadcast(groupName, leaveMsg, conn, isSystemMessage) // groupName added
+			broadcast(groupName, leaveMsg, conn, isSystemMessage)
 			prompt(groupName)
 			isSystemMessage = true
 			logs(groupName, leaveMsg+"\n")
 			addToHistory(leaveMsg)
 			flag = true
-
-			clientsMu.Lock()
-			delete(Groups[groupName], conn) // Clients -> Groups[groupName]
-			if len(Groups[groupName]) == 0 {
-				delete(Groups, groupName) // remove empty group
-				removeLogFile(groupName)
-			}
-			clientsMu.Unlock()
 			return
 		}
 		message = strings.TrimSpace(message)
 
-		// Change name command
+		// Change name
 		if message == "/name" {
 			for {
-				clientsMu.Lock()
 				newName, err := getClientName(conn, groupName)
 				if err != nil {
-					clientsMu.Unlock()
 					conn.Write([]byte("Invalid name, try again.\n"))
 					continue
 				}
 
-				oldName := name
-				name = newName
-				Groups[groupName][conn] = newName
-				clientsMu.Unlock()
+				groupsMu.Lock()
+				if _, ok := Groups[groupName]; ok {
+					oldName := name
+					name = newName
+					Groups[groupName][conn] = newName
+					groupsMu.Unlock()
 
-				changeMsg := fmt.Sprintf("🔁 %s changed name to %s", oldName, newName)
-				broadcast(groupName, changeMsg, conn, isSystemMessage)
-				isSystemMessage = true
-				logs(groupName, changeMsg+"\n")
-				addToHistory(changeMsg)
-				break
+					changeMsg := fmt.Sprintf("🔁 %s changed name to %s", oldName, newName)
+					broadcast(groupName, changeMsg, conn, isSystemMessage)
+					isSystemMessage = true
+					logs(groupName, changeMsg+"\n")
+					addToHistory(changeMsg)
+					break
+				} else {
+					groupsMu.Unlock()
+					conn.Write([]byte("Group no longer exists.\n"))
+					return
+				}
 			}
 			continue
 		}
 
-		// Skip invalid or empty messages
 		if message == "" || !Isvalidmessage(message) {
 			flag = false
-			clientsMu.Lock()
-			clientName, ok := Groups[groupName][conn] // Clients -> Groups[groupName]
-			clientsMu.Unlock()
+			groupsMu.Lock()
+			clientName, ok := Groups[groupName][conn]
+			groupsMu.Unlock()
 			if !ok {
 				return
 			}
-
 			formatted1 := fmt.Sprintf("[%s][%s]:",
 				time.Now().Format("2006-01-02 15:04:05"),
 				clientName)
@@ -145,86 +151,82 @@ func HandleConnection(conn net.Conn) {
 			message)
 
 		addToHistory(formatted)
-		broadcast(groupName, formatted, conn, isSystemMessage) // groupName added
+		broadcast(groupName, formatted, conn, isSystemMessage)
 		isSystemMessage = false
 		logs(groupName, formatted+"\n")
 		flag = true
-
 	}
 }
 
-// Prompts client to create a new group chat
 func CreateGroup(conn net.Conn) (string, string, error) {
 	groupsMu.Lock()
 	if len(Groups) >= MAX_GROUPS {
 		groupsMu.Unlock()
-		/*_, err := */ conn.Write([]byte("Server is full. Choose again!\n"))
-		// if err != nil {
-		// 	fmt.Println("error writing to the client", err) // logs should be in terminal ui
-		// }
-		// write with error handling could be wrapped in separate function !
-		// continue
+		conn.Write([]byte("Server is full. Choose again!\n"))
 		return "", "", nil
 	}
 
-	groupName := fmt.Sprintf("room%d", len(Groups)+1) // handle group names when all users exit
+	groupName := fmt.Sprintf("room%d", len(Groups)+1)
 	Groups[groupName] = make(map[net.Conn]string)
+	groupsMu.Unlock()
 
 	name, err := getClientName(conn, groupName)
 	if err != nil {
 		fmt.Println("Invalid name. Disconnecting client.")
-		// return
 		return "", "", err
 	}
-	Groups[groupName][conn] = name
+
+	groupsMu.Lock()
+	if _, ok := Groups[groupName]; ok {
+		Groups[groupName][conn] = name
+	}
 	groupsMu.Unlock()
 
 	return groupName, name, nil
 }
 
-// Prompts client to join an existing group chat
 func JoinGroup(conn net.Conn) (string, string, error) {
 	reader := bufio.NewReader(conn)
-	// groupsMu.Lock()
+
+	groupsMu.Lock()
 	if len(Groups) == 0 {
-		// groupsMu.Unlock() // must be related to group creation logic !!!!!!!!!!!!!
+		groupsMu.Unlock()
 		conn.Write([]byte("No groups found. Choose again!\n"))
-		// continue
 		return "", "", nil
 	}
+	groupsMu.Unlock()
+
 	for {
+		groupsMu.Lock()
 		for grp := range Groups {
-			s := fmt.Sprintf("* %s [%d users]\n", grp, len(Groups[grp]))
-			conn.Write([]byte(s))
+			conn.Write([]byte(fmt.Sprintf("* %s [%d users]\n", grp, len(Groups[grp]))))
 		}
+		groupsMu.Unlock()
+
 		conn.Write([]byte("[ENTER GROUP NAME]:"))
 		groupName, _ := reader.ReadString('\n')
 		groupName = strings.ToLower(strings.TrimSpace(groupName))
-		groupsMu.Lock() // in case it got deleted, until client joins group
+
+		groupsMu.Lock()
 		_, ok := Groups[groupName]
+		groupsMu.Unlock()
 		if !ok {
-			conn.Write([]byte("Group not found. Choose again!\n")) // locks + group delete logic
-			continue                                               // choose another group
+			conn.Write([]byte("Group not found. Choose again!\n"))
+			continue
 		}
 
 		name, err := getClientName(conn, groupName)
 		if err != nil {
 			fmt.Println("Invalid name. Disconnecting client.")
-			// return
 			return "", "", err
 		}
 
-		clientsMu.Lock()                           // must be specific to that group
-		if len(Groups[groupName]) >= MAX_CLIENTS { // Clients -> Groups[groupName]
-			clientsMu.Unlock()
-			_, err := conn.Write([]byte("Server full. Choose again!\n"))
-			if err != nil {
-				fmt.Println("error writing to the client", err)
-			}
+		groupsMu.Lock()
+		if len(Groups[groupName]) >= MAX_CLIENTS {
+			groupsMu.Unlock()
+			conn.Write([]byte("Server full. Choose again!\n"))
 			continue
 		}
-		clientsMu.Unlock()
-
 		Groups[groupName][conn] = name
 		groupsMu.Unlock()
 
